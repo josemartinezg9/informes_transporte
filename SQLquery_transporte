@@ -1,0 +1,98 @@
+-- INFORMES PARA EMPRESA DE TRANSPORTE --
+
+-- Informe de conductores activos.
+SELECT first_name AS nombre, last_name AS apellido, dob, ssn, phone AS contacto
+FROM drivers
+WHERE active = 'true'
+ORDER BY apellido ASC;
+
+
+-- Informe de los vehiculos activos.
+SELECT description AS descripcion, year AS modelo, make AS marca, capacity AS capacidad
+FROM vehicles
+WHERE active = 'true'
+ORDER BY make;
+
+
+-- Informe de todas las rutas activas, conductor y vehiculo asignado.
+SELECT routes.id, routes.description AS route, drivers.first_name AS driver_name, drivers.last_name AS driver_last_name, drivers.phone, vehicles.description AS car_description, vehicles.make AS car_brand
+FROM routes
+INNER JOIN drivers ON routes.driver_id = drivers.id
+INNER JOIN vehicles ON routes.vehicle_id = vehicles.id
+WHERE routes.active = 'true'
+ORDER BY routes.id;
+
+
+--  Informe demográfico de los conductores activos, que segregue la ciudad y la edad de los mismos.
+SELECT first_name, last_name, city, date_part('year', age(dob)) AS age
+FROM drivers
+WHERE active = 'true';
+
+
+-- Informe demográfico de los vehículos activos, que segregue marcas y modelos mas usados en las rutas activas.
+SELECT vehicles.make, vehicles.year, SUM(end_time - start_time) AS total_hours
+FROM routes
+INNER JOIN vehicles ON routes.vehicle_id = vehicles.id
+INNER JOIN schedules ON routes.id = schedules.route_id
+WHERE routes.active = 'true' AND vehicles.active = 'true'
+GROUP BY vehicles.make, vehicles.year
+ORDER BY total_hours DESC
+LIMIT 10;
+
+
+-- Informe con todas las rutas que tuvieron un horario en el 2023.
+SELECT description AS rutas, schedules.date
+FROM routes
+INNER JOIN schedules ON routes.id = schedules.route_id
+WHERE schedules.date BETWEEN '2023-01-01' AND '2023-12-31';
+
+
+-- Informe que muestre las horas de servicio por ruta y año.
+SELECT routes.description AS route, date_part('year', schedules.date) AS year, SUM(date_part('hour', end_time - start_time)) AS total_hours
+FROM routes
+INNER JOIN schedules ON routes.id = schedules.route_id
+WHERE routes.active = 'true'
+GROUP BY routes.description, year
+ORDER BY description ASC;
+
+
+-- Query SQL que calcule el número de horas de servicio de un vehículo.
+SELECT vehicles.description AS car, vehicles.make AS brand, SUM(end_time - start_time) AS total_hours
+FROM routes
+INNER JOIN schedules ON routes.id = schedules.route_id
+INNER JOIN vehicles ON routes.vehicle_id = vehicles.id
+WHERE vehicles.description = 'GMDRSFBTALH'
+GROUP BY vehicles.description, vehicles.make;
+
+
+
+-- Query SQL que calcule el número de horas de servicio de un conductor.
+SELECT drivers.first_name AS name, drivers.last_name AS last_name, SUM(end_time - start_time) AS total_hours
+FROM routes
+INNER JOIN schedules ON routes.id = schedules.route_id
+INNER JOIN drivers ON routes.driver_id = drivers.id
+WHERE drivers.last_name = 'Bernier'
+GROUP BY drivers.first_name, drivers.last_name;
+
+
+-- Actualización de datos personales de conductores.
+ALTER TABLE drivers
+ALTER COLUMN identification DROP NOT NULL,
+ALTER COLUMN ssn DROP NOT NULL,
+ALTER COLUMN dob DROP NOT NULL,
+ALTER COLUMN address DROP NOT NULL,
+ALTER COLUMN city DROP NOT NULL,
+ALTER COLUMN zip DROP NOT NULL,
+ALTER COLUMN phone DROP NOT NULL;
+
+UPDATE drivers d
+SET(identification, ssn, dob, address, city, zip, phone) =
+(SELECT identification, ssn, dob, address, city, zip, phone
+FROM drivers_info_updated di
+WHERE d.ssn = di.ssn);
+
+-- Revisamos con un dato de la nueva tabla.
+SELECT *
+FROM drivers
+WHERE ssn = '726-69-8105';
+
